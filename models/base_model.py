@@ -1,5 +1,5 @@
-import uuid
 from models import storage
+import uuid
 from datetime import datetime
 
 class BaseModel:
