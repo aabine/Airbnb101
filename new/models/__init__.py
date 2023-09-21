@@ -6,8 +6,6 @@ from models.base_model import BaseModel
 from os import getenv
 
 
-if getenv("HBNB_TYPE_STORAGE") == "db":
-    storage = DBStorage()
-else:
-    storage = FileStorage()
+storage = DBStorage() if getenv(
+    "HBNB_TYPE_STORAGE") == "db" else FileStorage()
 storage.reload()
