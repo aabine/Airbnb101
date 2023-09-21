@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import os
+from os import getenv
 from typing import Dict, Optional, Type
 
     
@@ -12,14 +12,14 @@ class DBStorage:
         Initializes the DBStorage object and establishes 
         a connection to the MySQL database.
         """
-        user = os.getenv('HBNB_MYSQL_USER')
-        passwd = os.getenv('HBNB_MYSQL_PWD')
-        db = os.getenv('HBNB_MYSQL_DB')
+        user = getenv('HBNB_MYSQL_USER')
+        passwd = getenv('HBNB_MYSQL_PWD')
+        db = getenv('HBNB_MYSQL_DB')
         self.__engine = create_engine(
             f"mysql+mysqldb://{user}:{passwd}@localhost:3306/{db}",
             pool_pre_ping=True
         )
-        if os.getenv("HBNB_ENV") == "test":
+        if getenv("HBNB_ENV") == "test":
             Base.metadata.drop_all(bind=self.__engine)
 
     def all(self, cls: Optional[Type] = None) -> Dict[str, object]:
