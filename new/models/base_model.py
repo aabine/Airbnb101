@@ -40,12 +40,18 @@ class BaseModel:
         models.storage.new(self)
         models.storage.save()
 
-    def to_dict(self):
-        """Convert instance into dict format"""
-        dictionary = dict(self.__dict__)
-        if '_sa_instance_state' in dictionary.keys():
-            del dictionary['_sa_instance_state']
-        dictionary['__class__'] = str(type(self).__name__)
+    def to_dict(self) -> dict:
+        """
+        Convert instance into dictionary format.
+
+        Returns:
+            dict: A dictionary representation of the instance,
+            with the instance's attributes as keys
+            and their values as values.
+        """
+        dictionary = self.__dict__.copy()
+        dictionary.pop('_sa_instance_state', None)
+        dictionary['__class__'] = type(self).__name__
         dictionary['created_at'] = self.created_at.isoformat()
         dictionary['updated_at'] = self.updated_at.isoformat()
         return dictionary

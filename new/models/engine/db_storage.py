@@ -1,12 +1,8 @@
-import os
-from sqlalchemy.engine.url import URL
 #!/usr/bin/python3
-from os import getenv, environ
-from typing import Dict, Optional, Type
 
+import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
-
+from sqlalchemy.orm import sessionmaker, scoped_session
 from models.amenity import Amenity
 from models.base_model import Base
 from models.city import City
@@ -15,33 +11,37 @@ from models.review import Review
 from models.state import State
 from models.user import User
 
-
 class DBStorage:
     __engine = None
     __session = None
-    __class_mapping = [User, State, City, Amenity, Place, Review]
+    __class_mapping = {
+        'User': User,
+        'State': State,
+        'City': City,
+        'Amenity': Amenity,
+        'Place': Place,
+        'Review': Review
+    }
 
-    def __init__(self) -> None:
+    def __init__(self):
         """
-        Initializes the DBStorage object and establishes 
-        a connection to the MySQL database.
+        Initializes the DBStorage object and establishes a connection to the MySQL database.
         """
-        user = environ['HBNB_MYSQL_USER']
-        passwd = environ['HBNB_MYSQL_PWD']
-        db = environ['HBNB_MYSQL_DB']
-        url = URL(
-            drivername='mysql+mysqldb',
-            username=user,
-            password=passwd,
-            host='localhost',
-            port=3306,
-            database=db
-        )
-        self.__engine = create_engine(url, pool_pre_ping=True)
-        if environ["HBNB_ENV"] == "test":
+        user = os.getenv('HBNB_MYSQL_USER')
+        passwd = os.getenv('HBNB_MYSQL_PWD')
+        db = os.getenv('HBNB_MYSQL_DB')
+        
+        # Create the database URL
+        db_url = f"mysql+mysqldb://{user}:{passwd}@localhost:3306/{db}"
+
+        # Create the SQLAlchemy engine
+        self.__engine = create_engine(db_url, pool_pre_ping=True)
+
+        # If the environment is set to "test," drop all tables
+        if os.getenv("HBNB_ENV") == "test":
             Base.metadata.drop_all(bind=self.__engine)
 
-    def all(self, cls: Optional[Type] = None) -> Dict[str, object]:
+    def all(self, cls=None):
         """
         Retrieves all instances of a specific class from the database.
         If no class is specified, retrieves all instances from all classes.
@@ -58,43 +58,42 @@ class DBStorage:
                 bucket[key] = instance
 
         else:
-            for cls in self.__class_mapping:
+            for cls_name, cls in self.__class_mapping.items():
                 instances = self.__session.query(cls).all()
                 for instance in instances:
-                    key = f"{instance.__class__.__name__}.{instance.id}"
+                    key = f"{cls_name}.{instance.id}"
                     bucket[key] = instance
 
         return bucket
 
-    def new(self, obj: object) -> None:
+    def new(self, obj):
         """
         Adds a new instance to the database session.
         """
         self.__session.add(obj)
 
-    def save(self) -> None:
+    def save(self):
         """
         Commits the changes made in the database session.
         """
         self.__session.commit()
 
-    def delete(self, obj: object) -> None:
+    def delete(self, obj=None):
         """
         Deletes an instance from the database session.
         """
         if obj:
             self.__session.delete(obj)
 
-    def reload(self) -> None:
+    def reload(self):
         """
         Creates the database tables if they don't exist and creates a new session.
         """
         Base.metadata.create_all(self.__engine)
-        session = sessionmaker(bind=self.__engine, expire_on_commit=False)
-        Session = scoped_session(session)
-        self.__session = Session()
+        session_factory = sessionmaker(bind=self.__engine, expire_on_commit=False)
+        self.__session = scoped_session(session_factory)
 
-    def close(self) -> None:
+    def close(self):
         """
         Closes the database session.
         """
