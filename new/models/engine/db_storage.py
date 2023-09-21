@@ -1,25 +1,44 @@
+import os
+from sqlalchemy.engine.url import URL
 #!/usr/bin/python3
-from os import getenv
+from os import getenv, environ
 from typing import Dict, Optional, Type
 
-    
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
+
+from models.amenity import Amenity
+from models.base_model import Base
+from models.city import City
+from models.place import Place
+from models.review import Review
+from models.state import State
+from models.user import User
+
+
 class DBStorage:
     __engine = None
     __session = None
+    __class_mapping = [User, State, City, Amenity, Place, Review]
 
     def __init__(self) -> None:
         """
         Initializes the DBStorage object and establishes 
         a connection to the MySQL database.
         """
-        user = getenv('HBNB_MYSQL_USER')
-        passwd = getenv('HBNB_MYSQL_PWD')
-        db = getenv('HBNB_MYSQL_DB')
-        self.__engine = create_engine(
-            f"mysql+mysqldb://{user}:{passwd}@localhost:3306/{db}",
-            pool_pre_ping=True
+        user = environ['HBNB_MYSQL_USER']
+        passwd = environ['HBNB_MYSQL_PWD']
+        db = environ['HBNB_MYSQL_DB']
+        url = URL(
+            drivername='mysql+mysqldb',
+            username=user,
+            password=passwd,
+            host='localhost',
+            port=3306,
+            database=db
         )
-        if getenv("HBNB_ENV") == "test":
+        self.__engine = create_engine(url, pool_pre_ping=True)
+        if environ["HBNB_ENV"] == "test":
             Base.metadata.drop_all(bind=self.__engine)
 
     def all(self, cls: Optional[Type] = None) -> Dict[str, object]:
@@ -28,11 +47,10 @@ class DBStorage:
         If no class is specified, retrieves all instances from all classes.
         """
         bucket = {}
-        classes_to_query = [User, State, City, Amenity, Place, Review]
 
         if cls:
             if isinstance(cls, str):
-                cls = eval(cls)
+                cls = self.__class_mapping.get(cls)
 
             instances = self.__session.query(cls).all()
             for instance in instances:
@@ -40,7 +58,7 @@ class DBStorage:
                 bucket[key] = instance
 
         else:
-            for cls in classes_to_query:
+            for cls in self.__class_mapping:
                 instances = self.__session.query(cls).all()
                 for instance in instances:
                     key = f"{instance.__class__.__name__}.{instance.id}"
