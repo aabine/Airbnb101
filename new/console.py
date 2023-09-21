@@ -1,3 +1,4 @@
+import os
 #!/usr/bin/python3
 """ Console Module """
 import cmd
@@ -15,8 +16,7 @@ from models.review import Review
 class HBNBCommand(cmd.Cmd):
     """ Contains the functionality for the HBNB console"""
 
-    # determines prompt for interactive/non-interactive modes
-    prompt = '(hbnb) ' if sys.__stdin__.isatty() else ''
+    prompt = '(hbnb) ' if os.isatty(sys.stdin.fileno()) else ''
 
     classes = {
                'BaseModel': BaseModel, 'User': User, 'Place': Place,
@@ -32,7 +32,7 @@ class HBNBCommand(cmd.Cmd):
 
     def preloop(self):
         """Prints if isatty is false"""
-        if not sys.__stdin__.isatty():
+        if not os.isatty(sys.stdin.fileno()):
             print('(hbnb)')
 
     def precmd(self, line):
@@ -88,13 +88,13 @@ class HBNBCommand(cmd.Cmd):
 
     def postcmd(self, stop, line):
         """Prints if isatty is false"""
-        if not sys.__stdin__.isatty():
+        if not os.isatty(sys.stdin.fileno()):
             print('(hbnb) ', end='')
         return stop
 
     def do_quit(self, command):
         """ Method to exit the HBNB console"""
-        exit()
+        return True
 
     def help_quit(self):
         """ Prints the help documentation for quit  """
@@ -103,7 +103,7 @@ class HBNBCommand(cmd.Cmd):
     def do_EOF(self, arg):
         """ Handles EOF to exit program """
         print()
-        exit()
+        return True
 
     def help_EOF(self):
         """ Prints the help documentation for EOF """
@@ -191,29 +191,40 @@ class HBNBCommand(cmd.Cmd):
         print("[Usage]: show <className> <objectId>\n")
 
     def do_destroy(self, args):
-        """ Destroys a specified object """
-        new = args.partition(" ")
-        c_name = new[0]
-        c_id = new[2]
-        if c_id and ' ' in c_id:
-            c_id = c_id.partition(' ')[0]
+        """
+        Destroys a specified object
 
-        if not c_name:
+        Args:
+            args (str): A string containing the class name and
+            object id separated by a space.
+
+        Returns:
+            None
+        """
+        # Split the args string into the class name and object id
+        class_name, obj_id = args.split(" ", 1)
+
+        # Check if the class name is missing
+        if not class_name:
             print("** class name missing **")
             return
 
-        if c_name not in HBNBCommand.classes:
+        # Check if the class name is valid
+        if class_name not in HBNBCommand.classes:
             print("** class doesn't exist **")
             return
 
-        if not c_id:
+        # Check if the object id is missing
+        if not obj_id:
             print("** instance id missing **")
             return
 
-        key = c_name + "." + c_id
+        # Create a key by concatenating the class name and object id
+        key = f"{class_name}.{obj_id}"
 
+        # Try to delete the object from the storage using the key
         try:
-            del(storage.all()[key])
+            del storage.all()[key]
             storage.save()
         except KeyError:
             print("** no instance found **")
